@@ -4,11 +4,13 @@ import { generateChatResponse } from '@/utils/action';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { BsRobot } from 'react-icons/bs';
+import { FaRegUser } from 'react-icons/fa';
 
 const Chat = () => {
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
-  const { mutate: createMessage } = useMutation({
+  const { mutate: createMessage, isPending } = useMutation({
     mutationFn: (query) => generateChatResponse([...messages, query]),
     onSuccess: (data) => {
       if (!data) {
@@ -26,11 +28,24 @@ const Chat = () => {
     setMessages((items) => [...items, query]);
     setText('');
   };
-  console.log(messages);
+
   return (
     <div className='min-h-[calc(100vh-6rem)] grid grid-rows-[1fr,auto]'>
       <div>
-        <h2 className='text-5xl'>messages</h2>
+        {messages.map(({ role, content }, index) => {
+          const avatar = role == 'user' ? <FaRegUser /> : <BsRobot />;
+          const bcg = role == 'user' ? 'bg-base-200' : 'bg-base-100';
+          return (
+            <div
+              key={index}
+              className={`flex px-8 py-6 -mx-8 text-xl leading-loose border-b ${bcg} border-base-300`}
+            >
+              <span className='mt-2 mr-4'>{avatar}</span>
+              <p className='max-w-3xl'>{content}</p>
+            </div>
+          );
+        })}
+        {isPending && <span className='loading'></span>}
       </div>
       <form onSubmit={handleSubmit} className='pt-12 max-w-4xl'>
         <div className='w-full join'>
@@ -42,8 +57,12 @@ const Chat = () => {
             value={text}
             required
           />
-          <button className='btn btn-primary join-item' type='submit'>
-            ask question
+          <button
+            className='btn btn-primary join-item'
+            type='submit'
+            disabled={isPending}
+          >
+            {isPending ? 'please wait...' : 'ask question'}
           </button>
         </div>
       </form>
