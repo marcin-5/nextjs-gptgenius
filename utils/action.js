@@ -70,3 +70,30 @@ export const createNewTour = async (tour) => {
     data: tour,
   });
 };
+
+export const getAllTours = async (searchTerm) => {
+  const args = {
+    orderBy: {
+      city: 'asc',
+    },
+  };
+
+  if (searchTerm) {
+    args.where = {
+      OR: [
+        {
+          city: {
+            contains: searchTerm,
+          },
+        },
+        {
+          country: {
+            contains: searchTerm,
+          },
+        },
+      ],
+    };
+  }
+  console.log('args: ', args);
+  return await prisma.tour.findMany(args);
+};
