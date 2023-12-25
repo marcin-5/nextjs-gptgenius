@@ -49,7 +49,7 @@ export const generateTourResponse = async ({ city, country }) => {
       temperature: 0,
     });
     const tourData = JSON.parse(response.choices[0].message.content);
-    return tourData.tour;
+    return { tour: tourData.tour, tokens: response.usage.total_tokens };
   } catch (error) {
     console.log(error);
   }
@@ -96,7 +96,7 @@ export const getAllTours = async (searchTerm) => {
       ],
     };
   }
-  console.log('args: ', args);
+
   return await prisma.tour.findMany(args);
 };
 
@@ -142,7 +142,7 @@ export const generateUserTokensForEmail = async (email) => {
 export const fetchOrGenerateTokens = async (email) => {
   const result = await fetchUserTokensByEmail(email);
   if (result) return result;
-  return (await generateUserTokensForEmail(email));
+  return await generateUserTokensForEmail(email);
 };
 
 export const subtractTocens = async (email, tokens) => {

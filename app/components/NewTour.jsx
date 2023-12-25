@@ -1,16 +1,21 @@
 'use client';
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import TourInfo from './TourInfo';
 import {
   createNewTour,
+  fetchUserTokensByEmail,
   generateTourResponse,
   getExistingTour,
+  subtractTocens,
 } from '@/utils/action';
+import { useUser } from '@clerk/nextjs';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import TourInfo from './TourInfo';
 
 const NewTour = () => {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
+  const { user } = useUser();
+
   const {
     mutate,
     isPending,
@@ -20,15 +25,24 @@ const NewTour = () => {
       const existingTour = await getExistingTour(destination);
       if (existingTour) return existingTour;
 
-      const newTour = await generateTourResponse(destination);
-      if (newTour) {
-        await createNewTour(newTour);
-        queryClient.invalidateQueries({queryKey:['tours']})
-        return newTour;
+      const emailAddress = user.emailAddresses[0].emailAddress;
+      const currentTokens = await fetchUserTokensByEmail(emailAddress);
+      if (currentTokens < 300) {
+        toast.error('Token balance too low...');
+        return null;
       }
 
-      toast.error('No matching city found...');
-      return null;
+      const newTour = await generateTourResponse(destination);
+      if (!newTour) {
+        toast.error('No matching city found...');
+        return null;
+      }
+
+      const response = await createNewTour(newTour.tour);
+      queryClient.invalidateQueries({ queryKey: ['tours'] });
+      const newTokens = await subtractTocens(emailAddress, newTour.tokens);
+      toast.success(`${newTokens} tokens remaining...`);
+      return newTour.tour;
     },
   });
 
