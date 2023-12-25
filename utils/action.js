@@ -1,4 +1,5 @@
 'use server';
+import { revalidatePath } from 'next/cache';
 import OpenAI from 'openai';
 import prisma from './db';
 
@@ -15,6 +16,7 @@ export const generateChatResponse = async (chatMessages) => {
       ],
       model: 'gpt-3.5-turbo',
       temperature: 0,
+      max_tokens: 100,
     });
     return response.choices[0].message;
   } catch (error) {
@@ -117,4 +119,43 @@ export const generateTourImage = async ({ city, country }) => {
   } catch (error) {
     return null;
   }
+};
+
+export const fetchUserTokensByEmail = async (email) => {
+  const result = await prisma.token.findUnique({
+    where: {
+      email,
+    },
+  });
+  return result?.tokens;
+};
+
+export const generateUserTokensForEmail = async (email) => {
+  const result = await prisma.token.create({
+    data: {
+      email,
+    },
+  });
+  return result?.tokens;
+};
+
+export const fetchOrGenerateTokens = async (email) => {
+  const result = await fetchUserTokensByEmail(email);
+  if (result) return result;
+  return (await generateUserTokensForEmail(email));
+};
+
+export const subtractTocens = async (email, tokens) => {
+  const result = await prisma.token.update({
+    where: {
+      email,
+    },
+    data: {
+      tokens: {
+        decrement: tokens,
+      },
+    },
+  });
+  revalidatePath('/profile');
+  return result.tokens;
 };
